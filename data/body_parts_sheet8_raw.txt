@@ -1,0 +1,56 @@
+Head                 = Lu
+Lu
+Hair                 = Sam
+Sam
+Eyebrow              = Mit mul
+Mit mul
+Forehead             = Tal
+Tal
+Temple               = Annkha
+Annkha
+Eye                  = Mit
+Mit
+Ear                  = Bil
+Bil
+Nose                 = Nak
+Nak
+Cheek                = Biang
+Biang
+Jaw                  = Kha guk
+Kha guk
+Chin                 = Kha
+Kha
+Neck                 = Ngawng
+Ngawng
+Mouth                = Kam
+Kam
+Shoulder             = Liang
+Liang
+Chest                = Awm
+Awm
+Arm                  = Khut
+Khut
+Hand                 = Khut pek
+Khut pek
+Elbow                = Keu
+Keu
+Breast               = Nawi
+Nawi
+Belly                = Gil
+Gil
+Hip                  = Kawng
+Kawng
+Thigh                = Phei
+Phei
+Knee                 = Khuk
+Khuk
+Leg                  = Khe
+Khe
+Calf                 = Tan
+Tan
+Ankle                = Ak siat mit
+Ak siat mit
+Foot                 = Khe pek
+Khe pek
+Face                 = Mai
+Mai
