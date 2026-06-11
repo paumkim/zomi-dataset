@@ -62,6 +62,9 @@ Long vowels are **meaning-distinguishing**. Use them when the tone is held longe
 | `tho` | wake/get up | `thota` = already up |
 | `nei` | have, possess (ownership) | `Ke'n computer ka nei hi` |
 | `zang` | use, utilize | `Ke'n computer ka zang hi` |
+| `kong` | I (subject prefix with object) | `Kei'n nang kong it hi` (I love you) |
+
+**Note on `ka` vs `kong`:** Both mean "I" as a subject prefix, but `kong` is used when there's a direct object in the sentence. `ka` is used in other contexts. `Kei'n nang kong it hi` = I love you.
 
 ### The particle `pi` = big, huge
 
