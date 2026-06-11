@@ -41,6 +41,7 @@ Long vowels are **meaning-distinguishing**. Use them when the tone is held longe
 | `suung` | (deep) inside, interior | `sung` | inside |
 | `gaamsung` | jungle interior (gaam + sung, preferred over gaamsuung) | — | — |
 | `Zo` | victory, Zo people | — | — |
+| `Topa` | Lord (Tedim Zomi — correct) | `Toupa` | Mizoram-influenced spelling (avoid) |
 
 **Time expression note**: `Tuni Ziingsang` = "today early morning" (preferred). Use `Ziingsang` for morning, not `Ziinglam`.
 

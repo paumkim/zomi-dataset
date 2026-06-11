@@ -164,7 +164,11 @@ def normalize(text: str) -> str:
     # 2. Strip personal info (emails, social handles, IDs)
     text = _strip_personal_info(text)
 
-    # 3. Strip English Bible headers
+    # 3. Fix common Mizoram-influenced spellings to Tedim Zomi standard
+    text = re.sub(r'\bToupa\b', 'Topa', text)
+    text = re.sub(r'\btoupa\b', 'topa', text)
+
+    # 4. Strip English Bible headers
     text = _strip_headers(text)
 
     # 3. Merge prefix ki → kicing (ki attaches to following word)
