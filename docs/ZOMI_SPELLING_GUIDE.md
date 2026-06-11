@@ -267,6 +267,7 @@ Phonemic — keep distinct as written.
 
 | Number | Zomi | Notes |
 |--------|------|-------|
+| 0 | `bem` | zero, circle | `beem` (long variant) |
 | 1 | `khat` | |
 | 2 | `nih` | |
 | 3 | `thuum` | long uu |
