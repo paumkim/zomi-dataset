@@ -18,6 +18,10 @@ Long vowels are **meaning-distinguishing**. Use them when the tone is held longe
 | `daam` | good, healthy, positive | — | — |
 | `khua` | place, country, hometown | — | — |
 | `khuadam` | cool, breezy (khua + dam) | — | — |
+| `sanggam` | sibling | — | — |
+| `sanggampa` | brother (sanggam + pa) | — | — |
+| `sanggamnu` | sister (sanggam + nu) | — | — |
+| `nu` | mother, female | — | — |
 | `doong` | collecting, to collect | `dong` | ask, asking |
 | `paawl` | group (paawl khat) | `pawl` | stripe (zebra stripe) |
 | `ngeen` | fishnet | `ngen` | ask, requesting |
@@ -89,6 +93,7 @@ Long vowels are **meaning-distinguishing**. Use them when the tone is held longe
 | `Damma` | — | Answer: "well/okay" | Short reply to Dammaw? |
 | `Dammah` | — | Answer with authority/anger | Adding `h` = more powerful tone |
 | `Dam takin` | — | Slowly, cooly | `dam` + `takin` (adverb) |
+| `Damahmah` | — | Very good, very thankful | `dam` + `mahmah` (reduplication for emphasis) |
 | `Lungdam` | — | Happy, grateful | `lung` (heart/mind) + `dam` (good) |
 | `Khuadam` | — | Cool, breezy (weather) | `khua` (place) + `dam` (good) |
 
