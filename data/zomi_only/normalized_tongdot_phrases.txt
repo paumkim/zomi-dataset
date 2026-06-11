@@ -1,0 +1,61 @@
+# Zomi Phrases from TongDot
+## Zomi-Only
+Dam maw?.
+Na dam maw?.
+Dam ma? / Zeitindah na um?.
+Dam maw?.
+Dam, Lungdam.
+Ka dam, Lungawi.
+Ka dam, Kaa lawm.
+Dam lai/ dam buang. Lungdam.
+Na Min bang ci kisam?.
+Na hmin zo a si?.
+Zeitindah na min na ttial?.
+Ka min pen _______.
+Ka hmin cu _______.
+kimuh theih lungdam.
+Kan tongawk ngah ih ka lungawi zet.
+Ka lo tawng ngah I ka lung a awi.
+Heh pih na tawh.
+Zangfahten.
+Zangfahnak.
+Lungdam.
+Lungawi.
+lawmhnak biachim.
+hi, he.
+a si; si.
+a si.
+hi lo, om lo.
+a si lo.
+a si lo.
+1.Khat.
+## English-Zomi Pairs
+EN: How are you? | ZO: Dam maw?
+EN: How are you? | ZO: Na dam maw?
+EN: How are you? | ZO: Dam ma? / Zeitindah na um?
+EN: How are you? | ZO: Dam maw?
+EN: Fine, thank you. | ZO: Dam, Lungdam.
+EN: Fine, thank you. | ZO: Ka dam, Lungawi.
+EN: Fine, thank you. | ZO: Ka dam, Kaa lawm.
+EN: Fine, thank you. | ZO: Dam lai/ dam buang. Lungdam.
+EN: What is your name? | ZO: Na Min bang ci kisam?
+EN: What is your name? | ZO: Na hmin zo a si?
+EN: What is your name? | ZO: Zeitindah na min na ttial?
+EN: My name is ______ . | ZO: Ka min pen _______.
+EN: My name is ______ . | ZO: Ka hmin cu _______.
+EN: Nice to meet you. | ZO: kimuh theih lungdam.
+EN: Nice to meet you. | ZO: Kan tongawk ngah ih ka lungawi zet.
+EN: Nice to meet you. | ZO: Ka lo tawng ngah I ka lung a awi.
+EN: Please ? | ZO: Heh pih na tawh..
+EN: Please ? | ZO: Zangfahten
+EN: Please ? | ZO: Zangfahnak
+EN: Thank you. | ZO: Lungdam.
+EN: Thank you. | ZO: Lungawi.
+EN: Thank you. | ZO: lawmhnak biachim.
+EN: Yes. | ZO: hi, he
+EN: Yes. | ZO: a si; si
+EN: Yes. | ZO: a si
+EN: No. | ZO: hi lo, om lo
+EN: No. | ZO: a si lo
+EN: No. | ZO: a si lo
+EN: 1. | ZO: 1.Khat

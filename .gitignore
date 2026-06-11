@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+
+# Generated files
+/data/zomi_corpus.txt
+/data/zomi_corpus_normalized.txt
+/data/processed_pdfs.json
+/data/visited_urls.json
+
+# Raw downloads (not text content)
+/data/scribd/
+
+# Logs
+*.log
+nohup.out
+
+# Temp
+/tmp/
+*.tmp
+*.temp
+
+# OS
+.DS_Store
+Thumbs.db
