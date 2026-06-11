@@ -64,17 +64,28 @@ Long vowels are **meaning-distinguishing**. Use them when the tone is held longe
 | `zang` | use, utilize | `Ke'n computer ka zang hi` |
 | `kong` | I (subject prefix with object) | `Kei'n nang kong it hi` (I love you) |
 
-### Why the apostrophe matters: `kei'n` vs `ken`
+### Critical distinction: `kei'n` ≠ `ken`
 
-The apostrophe in `kei'n` is **critical** — it signals the agentive contraction of `Kei in`:
+These are **completely different words** that sound similar when spoken lazily:
 
-| Proper | Lazy | Problem |
+| Word | Meaning | Example |
+|------|---------|---------|
+| `Kei'n` | I (agentive subject) — `Kei` + `in` | `Kei'n nang kong it hi` = I love you |
+| `Ken` | Don't! (negative imperative) | `Lawng ken!` = Don't touch! |
+| `Kei ing` | It is I / I am (declarative) | `Hih kei ing` = This is I |
+| `ing` | I am (first person marker) | `Hiah om ing` = Here I am |
+
+The apostrophe in `kei'n` is **critical**:
+
+| Proper | Lazy Spelling | Problem |
 |--------|------|---------|
-| `Kei'n` (I + agentive) | `Ken` | Ambiguous — could mean "don't" |
-| `lawng kei'n` (only I) | `lawng ken` | Confusing — different meaning |
-| `Topa'n` (Lord + agentive) | `Topan` | Looks like a different word |
+| `Kei'n nang kong it` | `Ken nang kong it` | Now it reads "Don't you..." instead of "I love you" |
+| `Lawng kei'n` (my touching) | `Lawng ken` | Now it reads "Don't touch" instead of "my touching" |
+| `Topa'n` (Lord + agentive) | `Topan` | Looks like a completely different word |
 
-Without the apostrophe, `ken` can be misread as a negative command or other word. The apostrophe tells the reader "this is a shortened form of `Kei in`" — making reading instant and clear.
+**`ken` = "don't"** is a standalone negative command word. It has nothing to do with `Kei'n`. The only reason they get confused is lazy pronunciation/spelling by people who drop the apostrophe.
+
+**Note on `kei` vs `ke`:** `Kei` is the full word for "I/me." `Ke` is the shortened form used in `Ke'n` (kei + 'n). The `Ke` form only appears with the apostrophe — never alone.
 
 ### The particle `pi` = big, huge
 
