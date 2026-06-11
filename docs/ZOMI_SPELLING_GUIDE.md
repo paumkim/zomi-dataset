@@ -64,7 +64,17 @@ Long vowels are **meaning-distinguishing**. Use them when the tone is held longe
 | `zang` | use, utilize | `Ke'n computer ka zang hi` |
 | `kong` | I (subject prefix with object) | `Kei'n nang kong it hi` (I love you) |
 
-**Note on `ka` vs `kong`:** Both mean "I" as a subject prefix, but `kong` is used when there's a direct object in the sentence. `ka` is used in other contexts. `Kei'n nang kong it hi` = I love you.
+### Why the apostrophe matters: `kei'n` vs `ken`
+
+The apostrophe in `kei'n` is **critical** — it signals the agentive contraction of `Kei in`:
+
+| Proper | Lazy | Problem |
+|--------|------|---------|
+| `Kei'n` (I + agentive) | `Ken` | Ambiguous — could mean "don't" |
+| `lawng kei'n` (only I) | `lawng ken` | Confusing — different meaning |
+| `Topa'n` (Lord + agentive) | `Topan` | Looks like a different word |
+
+Without the apostrophe, `ken` can be misread as a negative command or other word. The apostrophe tells the reader "this is a shortened form of `Kei in`" — making reading instant and clear.
 
 ### The particle `pi` = big, huge
 
