@@ -22,6 +22,8 @@ Long vowels are **meaning-distinguishing**. Use them when the tone is held longe
 | `sanggampa` | brother (sanggam + pa) | — | — |
 | `sanggamnu` | sister (sanggam + nu) | — | — |
 | `nu` | mother, female | — | — |
+| `Laisiangtho` | Bible, Holy Scripture | `lai` (paper) + `siang` (clean/pure) + `tho` | |
+| `Baibul` | Bible (Mizoram-influenced — avoid) | Borrowed from English "Bible" |
 | `doong` | collecting, to collect | `dong` | ask, asking |
 | `paawl` | group (paawl khat) | `pawl` | stripe (zebra stripe) |
 | `ngeen` | fishnet | `ngen` | ask, requesting |
@@ -34,6 +36,8 @@ Long vowels are **meaning-distinguishing**. Use them when the tone is held longe
 | `luung` | mind | — | — |
 | `laam` | dance | `lam` | path, way |
 | `la` | song | `la` | take (same spelling, context/tone distinguishes) |
+| `lai` | paper, written text | — | — |
+| `laisiangtho` | Bible, holy scripture | `lai` (paper) + `siang` (clean) + `tho` (?) |
 | `laapi` | big song (`la` + `pi`) | `lampi` | road, walking path, trail (lam + pi) |
 | `gaan` | animal | `gan` | (short form) |
 | `gaanlam` | animal path | `ganlam` | (short form) |
