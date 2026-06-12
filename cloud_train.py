@@ -3,16 +3,10 @@ Zomi Continued Pre-Training — RunPod / Cloud GPU Script.
 
 Usage:
     python cloud_train.py
-
-What it does:
-    - Loads Qwen 2.5 7B with 4-bit QLoRA (high rank r=128)
-    - Trains on your Zomi raw corpus (next-token prediction)
-    - Saves adapter + merged model to Hugging Face Hub
 """
 
 import os
 import math
-import glob
 from datasets import Dataset
 from transformers import (
     AutoTokenizer,
@@ -20,7 +14,6 @@ from transformers import (
     TrainingArguments,
     Trainer,
     BitsAndBytesConfig,
-    DataCollatorForLanguageModeling,
 )
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 import torch
@@ -77,41 +70,39 @@ train_lines = all_lines[:split_idx]
 eval_lines = all_lines[split_idx:]
 print(f"Train: {len(train_lines):,} | Eval: {len(eval_lines):,}")
 
+# Keep as raw text — no tokenization yet (saves memory)
 train_dataset = Dataset.from_dict({"text": train_lines})
 eval_dataset = Dataset.from_dict({"text": eval_lines})
 
-# ─── 2. TOKENIZE ─────────────────────────────────────────────────────────────
+# Free memory
+del all_lines, train_lines, eval_lines
+
+# ─── 2. LOAD TOKENIZER ───────────────────────────────────────────────────────
 
 print(f"\nLoading tokenizer: {BASE_MODEL}")
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, trust_remote_code=True)
 tokenizer.pad_token = tokenizer.eos_token
 
-def tokenize_function(examples):
-    outputs = tokenizer(
-        examples["text"],
-        truncation=True,
-        max_length=MAX_SEQ_LENGTH,
-        padding="max_length",
-    )
-    outputs["labels"] = [ids[:] for ids in outputs["input_ids"]]
-    return outputs
+# ─── 3. COLLATOR — Tokenizes on-the-fly per batch (no pre-tokenization) ──────
 
-print("Tokenizing train dataset...")
-train_dataset = train_dataset.map(
-    tokenize_function,
-    batched=True,
-    remove_columns=["text"],
-    num_proc=4,
-)
-print("Tokenizing eval dataset...")
-eval_dataset = eval_dataset.map(
-    tokenize_function,
-    batched=True,
-    remove_columns=["text"],
-    num_proc=4,
-)
+class ZomiDataCollator:
+    def __init__(self, tokenizer, max_length):
+        self.tokenizer = tokenizer
+        self.max_length = max_length
 
-# ─── 3. LOAD MODEL (4-bit QLoRA) ─────────────────────────────────────────────
+    def __call__(self, features):
+        texts = [f["text"] for f in features]
+        batch = self.tokenizer(
+            texts,
+            truncation=True,
+            padding="longest",
+            max_length=self.max_length,
+            return_tensors="pt",
+        )
+        batch["labels"] = batch["input_ids"].clone()
+        return batch
+
+# ─── 4. LOAD MODEL (4-bit QLoRA) ─────────────────────────────────────────────
 
 bnb_config = BitsAndBytesConfig(
     load_in_4bit=True,
@@ -126,11 +117,11 @@ model = AutoModelForCausalLM.from_pretrained(
     quantization_config=bnb_config,
     device_map="auto",
     trust_remote_code=True,
-    torch_dtype=torch.bfloat16,
+    dtype=torch.bfloat16,
 )
 model = prepare_model_for_kbit_training(model)
 
-# ─── 4. CONFIGURE LORA ───────────────────────────────────────────────────────
+# ─── 5. CONFIGURE LORA ───────────────────────────────────────────────────────
 
 lora_config = LoraConfig(
     r=LORA_R,
@@ -146,7 +137,7 @@ model.print_trainable_parameters()
 total_steps = (len(train_dataset) // (BATCH_SIZE * GRADIENT_ACCUMULATION_STEPS)) * NUM_EPOCHS
 warmup_steps = int(total_steps * 0.05)
 
-# ─── 5. TRAINING ─────────────────────────────────────────────────────────────
+# ─── 6. TRAINING ─────────────────────────────────────────────────────────────
 
 training_args = TrainingArguments(
     output_dir=f"./{RUN_NAME}",
@@ -160,7 +151,6 @@ training_args = TrainingArguments(
     warmup_steps=warmup_steps,
     lr_scheduler_type="cosine",
     bf16=True,
-    fp16=False,
     logging_steps=10,
     eval_strategy="steps",
     eval_steps=200,
@@ -181,7 +171,7 @@ trainer = Trainer(
     args=training_args,
     train_dataset=train_dataset,
     eval_dataset=eval_dataset,
-    data_collator=DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False),
+    data_collator=ZomiDataCollator(tokenizer, MAX_SEQ_LENGTH),
 )
 
 print(f"\nStarting training...")
@@ -191,7 +181,7 @@ print(f"  Warmup steps: {warmup_steps}")
 
 trainer.train()
 
-# ─── 6. SAVE & UPLOAD ────────────────────────────────────────────────────────
+# ─── 7. SAVE & UPLOAD ────────────────────────────────────────────────────────
 
 print("\nSaving LoRA adapter...")
 adapter_path = f"./{RUN_NAME}-adapter"
@@ -226,4 +216,4 @@ tokenizer.push_to_hub(f"{HF_USERNAME}/{RUN_NAME}")
 
 print(f"\n✓ Done! Model uploaded to: https://huggingface.co/{HF_USERNAME}/{RUN_NAME}")
 print(f"  Final eval loss: {trainer.state.best_metric:.4f}")
-print(f"  Perplexity: {math.exp(trainer.state.best_metric):.2f}")
+print(f"  Perplexity: {math.exp(trainer.state.best_metric):.4f}")
