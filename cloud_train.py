@@ -14,6 +14,7 @@ from transformers import (
     TrainingArguments,
     Trainer,
     BitsAndBytesConfig,
+    DataCollatorForLanguageModeling,
 )
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 import torch
@@ -92,34 +93,19 @@ train_lines = packed_lines[:split_idx]
 eval_lines = packed_lines[split_idx:]
 print(f"Train: {len(train_lines):,} chunks | Eval: {len(eval_lines):,} chunks")
 
-train_dataset = Dataset.from_dict({"text": train_lines})
-eval_dataset = Dataset.from_dict({"text": eval_lines})
-del packed_lines, train_lines, eval_lines
-
-# ─── 4. LOAD TOKENIZER ───────────────────────────────────────────────────────
+# ─── 4. LOAD TOKENIZER & PRE-TOKENIZE ───────────────────────────────────────
 
 print(f"\nLoading tokenizer: {BASE_MODEL}")
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, trust_remote_code=True)
 tokenizer.pad_token = tokenizer.eos_token
 
-# ─── 5. COLLATOR — Tokenizes on-the-fly per batch ────────────────────────────
+print("Tokenizing packed chunks (42k items — fits in memory)...")
+def tok_fn(examples):
+    return tokenizer(examples["text"], truncation=True, max_length=MAX_SEQ_LENGTH, padding="max_length")
 
-class ZomiDataCollator:
-    def __init__(self, tokenizer, max_length):
-        self.tokenizer = tokenizer
-        self.max_length = max_length
-
-    def __call__(self, features):
-        texts = [f["text"] for f in features]
-        batch = self.tokenizer(
-            texts,
-            truncation=True,
-            padding="longest",
-            max_length=self.max_length,
-            return_tensors="pt",
-        )
-        batch["labels"] = batch["input_ids"].clone()
-        return batch
+train_dataset = Dataset.from_dict({"text": train_lines}).map(tok_fn, batched=True, remove_columns=["text"])
+eval_dataset = Dataset.from_dict({"text": eval_lines}).map(tok_fn, batched=True, remove_columns=["text"])
+del train_lines, eval_lines, packed_lines
 
 # ─── 6. LOAD MODEL (4-bit QLoRA) ─────────────────────────────────────────────
 
@@ -191,7 +177,7 @@ trainer = Trainer(
     args=training_args,
     train_dataset=train_dataset,
     eval_dataset=eval_dataset,
-    data_collator=ZomiDataCollator(tokenizer, MAX_SEQ_LENGTH),
+    data_collator=DataCollatorForLanguageModeling(tokenizer, mlm=False),
 )
 
 print(f"\nStarting training...")
