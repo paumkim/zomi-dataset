@@ -160,6 +160,7 @@ training_args = TrainingArguments(
     load_best_model_at_end=True,
     metric_for_best_model="eval_loss",
     greater_is_better=False,
+    remove_unused_columns=False,
     report_to="none",
     push_to_hub=False,
     hub_model_id=f"{HF_USERNAME}/{RUN_NAME}",

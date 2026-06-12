@@ -295,6 +295,49 @@ Standard LoRA uses rank 8-64. We use **rank 128** to give the adapter more capac
 
 ---
 
+## The Scientist Workflow
+
+The process we just went through is exactly how ML researchers work — at Google, Meta, or any AI lab. Here's the pattern:
+
+```
+1. Write script  ──→  Run it  ──→  Fails with error
+                           ↓
+2. Read error  ──→  Google/fix  ──→  Edit script  ──→  Re-run
+                           ↓
+3. Repeat step 2 until it works  (usually 5-20 cycles)
+                           ↓
+4. Training runs for hours  ──→  Monitor loss curves
+                           ↓
+5. Evaluate results  ──→  Tweak hyperparameters  ──→  Repeat from step 1
+                           ↓
+6. Document everything  ──→  Push to GitHub  ──→  Write the guide
+```
+
+### Real examples from this session
+
+| Problem | Our Fix | Hours wasted |
+|---------|---------|--------------|
+| `overwrite_output_dir` removed | Just removed the line | 5 min |
+| SFTTrainer API changed | Switched to standard Trainer | 10 min |
+| Tokenizer argument renamed | Changed to `processing_class` | 5 min |
+| DataCollator mismatch | Different args for TRL vs transformers | 10 min |
+| Memory crash (padding) | Switched to on-the-fly tokenization | 30 min |
+| Subprocess died (OOM) | Reduced `num_proc` or restarted pod | 15 min |
+| `remove_unused_columns` | Added the flag to TrainingArguments | 5 min |
+| GPU memory full from old runs | `pkill -9 python` + restart | 2 min |
+
+**Total: ~1.5 hours of debugging for a 3-hour training run.** That's normal. In research labs, the ratio is often worse — weeks of debugging for days of training.
+
+### Why this matters
+
+Most people think science is: *have idea → run experiment → get result.*
+
+Real science is: *have idea → try 50 ways to make it work → finally get result → realize the idea was wrong → start over.*
+
+The documentation you're writing right now is what separates a one-time experiment from a reproducible process. Future you (or anyone else) can follow these steps and get the same result without repeating the 1.5 hours of debugging.
+
+---
+
 ## Files in This Guide
 
 | File | Purpose |
