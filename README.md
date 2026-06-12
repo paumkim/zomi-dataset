@@ -123,6 +123,12 @@ This dataset is ready for:
 - **Spell-checking** — the normalizer shows how Zomi spelling works
 - **Music AI** — 1,000+ songs with key, BPM, and time signature metadata
 
+### 🤖 Zomi AI Model
+
+The first Zomi-speaking AI is live on Hugging Face:
+- **Model:** [paumkim/zomi-qlora-v1](https://huggingface.co/paumkim/zomi-qlora-v1)
+- **Chat:** `python chat_zomi.py` or `python gradio_chat.py`
+
 See the **[Zomi Language Guide](https://paumkim.github.io/zomi-website/)** for spelling rules, grammar, and AI training docs.
 
 ## 🙏 Acknowledgments
