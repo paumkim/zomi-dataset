@@ -5,7 +5,7 @@
 A comprehensive collection for NLP, AI training, and language preservation.
 
 👉 **Website:** https://paumkim.github.io/zomi-website/
-👉 **Dataset:** https://github.com/paumkim/zomi-dataset
+👈 **Dataset Repo:** https://github.com/paumkim/zomi-dataset
 👉 **Size:** 3.6 GB · 1,060 files · 211,000,000+ characters
 
 ---
@@ -122,6 +122,8 @@ This dataset is ready for:
 - **Text-to-speech** — the clean corpus is pronunciation-ready
 - **Spell-checking** — the normalizer shows how Zomi spelling works
 - **Music AI** — 1,000+ songs with key, BPM, and time signature metadata
+
+See the **[Zomi Language Guide](https://paumkim.github.io/zomi-website/)** for spelling rules, grammar, and AI training docs.
 
 ## 🙏 Acknowledgments
 
