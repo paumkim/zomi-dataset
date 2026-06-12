@@ -99,9 +99,17 @@ zomi-dataset/                    (3.6 GB · 1,060 files)
 │   └── text/                    ← Raw OCR + normalized versions
 ├── normalize/                   ← Spelling normalizer
 │   └── normalizer.py            ← 15+ merge rules
+├── notebooks/                   ← Jupyter notebooks
+│   └── explore_zomi.ipynb       ← Explore and search the corpus
+├── scripts/                     ← Utility scripts
+│   ├── download_zomi.py         ← One-command downloader
+│   ├── dataset_stats.py         ← Corpus statistics
+│   └── create_bible_pdf.py      ← Tedim Bible PDF generator
 ├── crawl/                       ← Web scrapers
-├── docs/                        ← Spelling guides + references
+├── docs/                        ← Spelling guides + AI training
 ├── detect/                      ← Zomi language detection profile
+├── dataset_card.md              ← Hugging Face dataset card
+├── LICENSE                      ← CC0 Public Domain
 └── config.py                    ← Dataset configuration
 ```
 

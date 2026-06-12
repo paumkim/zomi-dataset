@@ -523,6 +523,14 @@ The documentation you're writing right now is what separates a one-time experime
 
 ---
 
+## Security Notes
+
+- **Never commit Hugging Face tokens to GitHub!** GitHub will reject the push and flag the token as compromised. Use `hf auth login` or `export HF_TOKEN=...` instead.
+- Keep personal agent scripts local-only if they contain tokens or private logic.
+- RunPod container disk wipes on pod stop — save checkpoints to Hugging Face Hub or use a network volume.
+
+---
+
 ## Files in This Guide
 
 | File | Purpose |
