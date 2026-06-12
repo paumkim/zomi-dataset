@@ -133,4 +133,4 @@ preservation and advancement of the Zomi (Tedim) language.
 
 ---
 
-Dammah! 🔥
+Dammaw! 🔥
