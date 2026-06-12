@@ -47,7 +47,8 @@ TARGET_MODULES = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj"
 
 # ─── 1. LOAD DATA ────────────────────────────────────────────────────────────
 
-def load_texts(data_dir, filenames):
+def load_and_pack(data_dir, filenames, tokenizer, max_length=2048):
+    """Load text and pack short lines into chunks of ~max_length tokens."""
     texts = []
     for fn in filenames:
         path = os.path.join(data_dir, fn)
@@ -59,31 +60,47 @@ def load_texts(data_dir, filenames):
         lines = [l.strip() for l in content.split("\n") if l.strip()]
         texts.extend(lines)
         print(f"  Loaded {fn}: {len(lines)} lines")
-    return texts
+    print(f"Total lines: {len(texts):,}")
+
+    # Pack lines into chunks of ~max_length tokens
+    packed = []
+    current_chunk = []
+    current_len = 0
+    for line in texts:
+        tokens = tokenizer.encode(line, add_special_tokens=False)
+        line_len = len(tokens) + 1  # +1 for eos token
+        if current_len + line_len > max_length:
+            if current_chunk:
+                packed.append(tokenizer.decode(current_chunk))
+            current_chunk = tokens
+            current_len = line_len
+        else:
+            current_chunk.extend(tokens)
+            current_len += line_len
+    if current_chunk:
+        packed.append(tokenizer.decode(current_chunk))
+
+    print(f"Packed into {len(packed):,} chunks (avg ~{max_length} tokens)")
+    return packed
+
 
 print("Loading Zomi corpus...")
-all_lines = load_texts(DATA_DIR, TEXT_FILES)
-print(f"Total lines: {len(all_lines):,}")
-
-split_idx = int(len(all_lines) * TRAIN_SPLIT)
-train_lines = all_lines[:split_idx]
-eval_lines = all_lines[split_idx:]
-print(f"Train: {len(train_lines):,} | Eval: {len(eval_lines):,}")
-
-# Keep as raw text — no tokenization yet (saves memory)
-train_dataset = Dataset.from_dict({"text": train_lines})
-eval_dataset = Dataset.from_dict({"text": eval_lines})
-
-# Free memory
-del all_lines, train_lines, eval_lines
-
-# ─── 2. LOAD TOKENIZER ───────────────────────────────────────────────────────
-
-print(f"\nLoading tokenizer: {BASE_MODEL}")
+print("\nLoading tokenizer first (needed for packing)...")
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, trust_remote_code=True)
 tokenizer.pad_token = tokenizer.eos_token
 
-# ─── 3. COLLATOR — Tokenizes on-the-fly per batch (no pre-tokenization) ──────
+packed_lines = load_and_pack(DATA_DIR, TEXT_FILES, tokenizer, MAX_SEQ_LENGTH)
+
+split_idx = int(len(packed_lines) * TRAIN_SPLIT)
+train_lines = packed_lines[:split_idx]
+eval_lines = packed_lines[split_idx:]
+print(f"Train: {len(train_lines):,} chunks | Eval: {len(eval_lines):,} chunks")
+
+train_dataset = Dataset.from_dict({"text": train_lines})
+eval_dataset = Dataset.from_dict({"text": eval_lines})
+del packed_lines, train_lines, eval_lines
+
+# ─── 3. COLLATOR — Tokenizes on-the-fly per batch ────────────────────────────
 
 class ZomiDataCollator:
     def __init__(self, tokenizer, max_length):
