@@ -47,8 +47,9 @@ TARGET_MODULES = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj"
 
 # ─── 1. LOAD DATA ────────────────────────────────────────────────────────────
 
-def load_and_pack(data_dir, filenames, tokenizer, max_length=2048):
-    """Load text and pack short lines into chunks of ~max_length tokens."""
+def load_and_pack(data_dir, filenames, max_chars=4000):
+    """Load text and pack short lines into chunks of ~max_chars characters.
+    Using character count is ~100x faster than tokenizing each line individually."""
     texts = []
     for fn in filenames:
         path = os.path.join(data_dir, fn)
@@ -62,34 +63,29 @@ def load_and_pack(data_dir, filenames, tokenizer, max_length=2048):
         print(f"  Loaded {fn}: {len(lines)} lines")
     print(f"Total lines: {len(texts):,}")
 
-    # Pack lines into chunks of ~max_length tokens
-    packed = []
-    current_chunk = []
-    current_len = 0
+    # Pack by character count (roughly ~2048 tokens ≈ ~4000 chars for Zomi)
+    chunks = []
+    buf = []
+    buf_len = 0
     for line in texts:
-        tokens = tokenizer.encode(line, add_special_tokens=False)
-        line_len = len(tokens) + 1  # +1 for eos token
-        if current_len + line_len > max_length:
-            if current_chunk:
-                packed.append(tokenizer.decode(current_chunk))
-            current_chunk = tokens
-            current_len = line_len
+        line_len = len(line) + 1  # +1 for space/newline
+        if buf_len + line_len > max_chars:
+            if buf:
+                chunks.append(" ".join(buf))
+            buf = [line]
+            buf_len = line_len
         else:
-            current_chunk.extend(tokens)
-            current_len += line_len
-    if current_chunk:
-        packed.append(tokenizer.decode(current_chunk))
+            buf.append(line)
+            buf_len += line_len
+    if buf:
+        chunks.append(" ".join(buf))
 
-    print(f"Packed into {len(packed):,} chunks (avg ~{max_length} tokens)")
-    return packed
+    print(f"Packed into {len(chunks):,} chunks (~{max_chars} chars each)")
+    return chunks
 
 
 print("Loading Zomi corpus...")
-print("\nLoading tokenizer first (needed for packing)...")
-tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, trust_remote_code=True)
-tokenizer.pad_token = tokenizer.eos_token
-
-packed_lines = load_and_pack(DATA_DIR, TEXT_FILES, tokenizer, MAX_SEQ_LENGTH)
+packed_lines = load_and_pack(DATA_DIR, TEXT_FILES, max_chars=4000)
 
 split_idx = int(len(packed_lines) * TRAIN_SPLIT)
 train_lines = packed_lines[:split_idx]
@@ -100,7 +96,13 @@ train_dataset = Dataset.from_dict({"text": train_lines})
 eval_dataset = Dataset.from_dict({"text": eval_lines})
 del packed_lines, train_lines, eval_lines
 
-# ─── 3. COLLATOR — Tokenizes on-the-fly per batch ────────────────────────────
+# ─── 4. LOAD TOKENIZER ───────────────────────────────────────────────────────
+
+print(f"\nLoading tokenizer: {BASE_MODEL}")
+tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, trust_remote_code=True)
+tokenizer.pad_token = tokenizer.eos_token
+
+# ─── 5. COLLATOR — Tokenizes on-the-fly per batch ────────────────────────────
 
 class ZomiDataCollator:
     def __init__(self, tokenizer, max_length):
@@ -119,7 +121,7 @@ class ZomiDataCollator:
         batch["labels"] = batch["input_ids"].clone()
         return batch
 
-# ─── 4. LOAD MODEL (4-bit QLoRA) ─────────────────────────────────────────────
+# ─── 6. LOAD MODEL (4-bit QLoRA) ─────────────────────────────────────────────
 
 bnb_config = BitsAndBytesConfig(
     load_in_4bit=True,
@@ -138,7 +140,7 @@ model = AutoModelForCausalLM.from_pretrained(
 )
 model = prepare_model_for_kbit_training(model)
 
-# ─── 5. CONFIGURE LORA ───────────────────────────────────────────────────────
+# ─── 7. CONFIGURE LORA ───────────────────────────────────────────────────────
 
 lora_config = LoraConfig(
     r=LORA_R,
@@ -154,7 +156,7 @@ model.print_trainable_parameters()
 total_steps = (len(train_dataset) // (BATCH_SIZE * GRADIENT_ACCUMULATION_STEPS)) * NUM_EPOCHS
 warmup_steps = int(total_steps * 0.05)
 
-# ─── 6. TRAINING ─────────────────────────────────────────────────────────────
+# ─── 8. TRAINING ─────────────────────────────────────────────────────────────
 
 training_args = TrainingArguments(
     output_dir=f"./{RUN_NAME}",
@@ -199,7 +201,7 @@ print(f"  Warmup steps: {warmup_steps}")
 
 trainer.train()
 
-# ─── 7. SAVE & UPLOAD ────────────────────────────────────────────────────────
+# ─── 10. SAVE & UPLOAD ────────────────────────────────────────────────────────
 
 print("\nSaving LoRA adapter...")
 adapter_path = f"./{RUN_NAME}-adapter"
