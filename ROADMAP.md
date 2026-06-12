@@ -1,5 +1,13 @@
 # Zomi AI — Project Roadmap
 
+## Core Strategy: Belonging First, AI Second
+
+- 📖 **Laisiangtho (Bible)** → the door. Every Zomi speaker wants this.
+- 🎵 **La (Lyrics)** → the hook. Worship songs with chords. Church, youth, family.
+- 🤖 **AI Kammal (AI)** → the treasure. Discovered when they're ready.
+
+People come for the Bible and songs. They stay for the AI. Belonging is the feature.
+
 ## Status (June 12, 2026)
 - ✅ Zomi dataset collected (3M+ lines)
 - ✅ Website built (spelling guide, Bible PDF, AI guides)
