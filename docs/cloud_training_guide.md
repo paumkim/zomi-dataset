@@ -211,9 +211,20 @@ BATCH_SIZE = 4                           # Reduce if OOM errors
 
 ## Troubleshooting
 
+### Pod ran out of memory (OOM)
+
+**Symptoms**: Container keeps restarting, `nvidia-smi` shows high GPU memory, or terminal shows OOM errors.
+
+**Fix**: Clear old processes and verify GPU:
+```bash
+pkill -9 python 2>/dev/null; pkill -9 python3 2>/dev/null
+nvidia-smi
+```
+If GPU memory is high (>60GB used), **Stop and Restart** the pod from the RunPod dashboard.
+
 ### "Subprocess died during map operation"
 
-**Cause**: Ran out of memory during tokenization.
+**Cause**: Ran out of memory during tokenization (usually from `padding="max_length"`).
 
 **Fix**: In `cloud_train.py`, change:
 ```python
@@ -233,6 +244,16 @@ num_proc=1,
 BATCH_SIZE = 2           # instead of 4
 MAX_SEQ_LENGTH = 1024    # instead of 2048
 ```
+
+### "No columns in the dataset match the model's forward method"
+
+**Cause**: The Trainer dropped the `text` column before the data collator could tokenize it.
+
+**Fix**: Add this to `TrainingArguments` in the script:
+```python
+remove_unused_columns=False,
+```
+Already included in the latest `cloud_train.py`.
 
 ### "SFTTrainer got unexpected keyword argument"
 
