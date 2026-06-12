@@ -8,6 +8,13 @@
 
 People come for the Bible and songs. They stay for the AI. Belonging is the feature.
 
+## AI Strategy: Hybrid by Default
+
+- **Cloud AI:** Works on first launch, ~30 MB app size, needs internet
+- **Optional offline model:** Download ~1.8 GB from Settings (on WiFi)
+- **Bible + Lyrics + Textbooks:** Work offline from day one, no download needed
+- **Philosophy:** Every Pau user gets a great experience regardless of phone or internet
+
 ## Status (June 12, 2026)
 - ✅ Zomi dataset collected (3M+ lines)
 - ✅ Website built (spelling guide, Bible PDF, AI guides)
