@@ -32,15 +32,59 @@ A complete step-by-step guide to fine-tuning a language model on the Zomi corpus
 
 ## Step 1: Deploy a GPU on RunPod
 
-1. Go to [console.runpod.io](https://console.runpod.io)
-2. Click **Pods** → **Deploy**
-3. Under **Community Cloud**, find **A100 SXM** (80GB, $1.49/hr)
-   - A100 PCIe ($1.39/hr) works fine too
-4. Template: Select **RunPod PyTorch 2.1**
-5. Container Disk: **20 GB**
-6. Click **Deploy Now**
+This section walks you through every click and selection. Follow along on your screen.
 
-Your pod will start in ~1-2 minutes. Wait for the status to show **"Ready"**.
+### 1.1 Create a RunPod account
+
+1. Go to [runpod.io](https://runpod.io)
+2. Click **Sign Up** (top right)
+3. Enter email, password — or sign in with Google/GitHub
+4. Check your email for a verification link and click it
+5. Log in to your account
+
+### 1.2 Add credit
+
+1. Go to **Billing** in the left sidebar
+2. Click **Add Funds**
+3. Enter **$10** (minimum) or **$15** (recommended — covers 10 hours of training)
+4. Enter your card details and confirm
+
+### 1.3 Deploy the pod
+
+1. Go to **Pods** in the left sidebar
+2. Click the blue **Deploy** button
+3. Under **Community Cloud**, you'll see a list of GPUs with prices
+4. Find **A100 SXM** (80GB, $1.49/hr) — it's usually near the top
+   - Hover over it and click **Deploy**
+   - If A100 SXM is unavailable, choose **A100 PCIe** ($1.39/hr) or **RTX 6000 Ada** ($0.77/hr, 48GB)
+5. A configuration panel opens. Set these options:
+
+| Setting | Value | Why |
+|---------|-------|-----|
+| **GPU Count** | **1** | Single GPU is enough for 7B QLoRA |
+| **Template** | **RunPod PyTorch 2.1** | Has CUDA, torch, Python pre-installed |
+| **Container Disk** | **20 GB** | Enough for your data + model weights |
+| **Volume** | **None** (skip) | Not needed for single training run |
+
+6. Click the blue **Deploy Now** button at the bottom
+
+Your pod will show **"Status: Initializing"** for about 1-2 minutes. Wait until it changes to **"Ready"** and the power button turns green.
+
+### 1.4 Check your pod is running
+
+Once ready, you'll see:
+
+```
+┌─────────────────────────────────────────────┐
+│  Pod Name           │  zomi-training-1       │
+│  GPU                │  1× A100-SXM4-80GB    │
+│  Status             │  ✅ Ready              │
+│  Runtime            │  0:02:34               │
+│  Cost               │  $0.06                 │
+└─────────────────────────────────────────────┘
+```
+
+You are now being billed **$1.49 per hour**. Training takes 3-5 hours, so the total will be **$5-10**.
 
 ### GPU Options Explained
 
@@ -57,23 +101,41 @@ For Qwen 2.5 7B with QLoRA, any 48GB+ GPU works. A100 is recommended for speed.
 
 ## Step 2: Connect and Upload Files
 
-Click **Connect** on your pod row. You have two options:
+### 2.1 Open Web Terminal
 
-- **Web Terminal** (easiest) — opens in your browser, no passwords
-- **SSH** — for advanced users, use `ssh -p <port> root@<ip>`
+1. In your RunPod dashboard, find your running pod
+2. Click the **Connect** button (it's on the right side of your pod row)
+3. A popup appears with connection options. Click **Web Terminal**
+4. A new browser tab opens with a black terminal screen: `root@f5cb63ff210b:/#`
 
-### Upload using File Browser
+You are now inside your cloud pod — a Linux computer with an A100 GPU.
 
-In the Web Terminal, look for the **File Browser** tab (next to Terminal):
+### 2.2 Upload your files
 
-1. Navigate to `/workspace/data/`
-2. Click **Upload** and select your 4 corpus files:
+In the Web Terminal, look at the top of the page. You'll see two tabs:
+
+```
+┌─────────────┬──────────────┐
+│  Terminal    │  File Browser │  ← Click this
+└─────────────┴──────────────┘
+```
+
+1. Click **File Browser**
+2. You'll see a file explorer. Navigate to `/workspace/data/` by clicking the folder path at the top and typing `/workspace/data/`
+3. Click **Upload** (top bar) and select these 4 files from your computer:
    - `zomi_clean_p1.txt`
    - `zomi_clean_p2.txt`
    - `zomi_clean_p3.txt`
    - `zomi_clean_p4.txt`
-3. Navigate to `/workspace/`
-4. Upload `cloud_train.py`
+4. Wait for upload to finish (shows 100% for each)
+5. Navigate to `/workspace/` (click the up-arrow or path)
+6. Upload `cloud_train.py`
+
+**Verify files are there** — switch back to the **Terminal** tab and run:
+```bash
+ls /workspace/data/ && ls /workspace/cloud_train.py
+```
+You should see the 4 corpus files and `cloud_train.py` listed.
 
 OR use the terminal (if your files are on your local machine):
 
@@ -88,31 +150,120 @@ You'll need the password from RunPod's Connect dialog.
 
 ## Step 3: Install Dependencies
 
-In the Web Terminal, paste:
+Make sure you're in the Web Terminal, then paste this exactly:
 
 ```bash
 pip install transformers accelerate peft bitsandbytes datasets huggingface_hub
 ```
 
-Wait for installation to finish (~1 minute).
+**What each package does:**
+
+| Package | Purpose |
+|---------|---------|
+| `transformers` | Hugging Face's core library — loads models/tokenizers |
+| `accelerate` | Distributes training across GPUs efficiently |
+| `peft` | LoRA/QLoRA — the adapter method that saves memory |
+| `bitsandbytes` | 4-bit quantization — shrinks model from 16GB to 4GB |
+| `datasets` | Hugging Face dataset loading and processing |
+| `huggingface_hub` | Upload your trained model to Hugging Face |
+
+Wait for the installation to complete. You'll see progress bars for each package, then a message like:
+
+```
+Successfully installed transformers-4.52.0 peft-0.15.0 ...
+```
+
+**If pip throws an error**, try:
+```bash
+pip install --upgrade pip && pip install accelerate peft bitsandbytes datasets huggingface_hub
+```
 
 ---
 
 ## Step 4: Login to Hugging Face
 
+---
+
+## Step 4: Login to Hugging Face
+
+This step gives the script permission to upload your trained model to your Hugging Face account.
+
 ```bash
 hf auth login
 ```
 
-Paste your Hugging Face token when prompted. This allows the script to upload the trained model to your Hugging Face account.
+A prompt appears:
+
+```
+Token: 
+```
+
+Go to [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) in your browser. If you don't have a token:
+
+1. Click **New Token**
+2. Name it something like "RunPod training"
+3. Set permissions to **Write** (needed to upload models)
+4. Click **Generate**
+5. Copy the token (looks like `hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`)
+
+Paste the token into the Web Terminal (right-click → Paste, or Ctrl+Shift+V). No asterisks will show — that's normal. Press **Enter**.
+
+If successful, you'll see:
+```
+✓ Login successful
+Your token has been saved to /root/.cache/huggingface/token
+✓ Authenticated through git-credential store
+```
+
+**If `hf auth login` doesn't work**, try the old version:
+```bash
+huggingface-cli login
+```
 
 ---
 
 ## Step 5: Run Training
 
+Now the actual training. Run this command:
+
 ```bash
 cd /workspace && python cloud_train.py
 ```
+
+**What you'll see** (step by step):
+
+```
+Loading Zomi corpus...
+  Loaded zomi_clean_p1.txt: 763158 lines
+  Loaded zomi_clean_p2.txt: 763158 lines
+  Loaded zomi_clean_p3.txt: 763158 lines
+  Loaded zomi_clean_p4.txt: 763157 lines
+Total lines: 3,052,631
+```
+
+This loads your text data. Takes ~10 seconds.
+
+```
+Loading tokenizer: Qwen/Qwen2.5-7B
+Loading model: Qwen/Qwen2.5-7B
+Loading weights: 100% |████| 339/339 [00:26]
+trainable params: 322,961,408 / 7,938,577,920 = 4.07%
+```
+
+This downloads the base model and applies LoRA. Takes ~1 minute. The 4.07% means only 4% of parameters will be trained — the rest are frozen in 4-bit.
+
+```
+Starting training...
+  Total train samples: 2,899,999
+  Warmup steps: 22656
+
+Step | Training Loss
+  10 |     2.4500
+  20 |     2.1200
+ 200 |     1.8900    Eval loss: 1.9500
+```
+
+**Training has started.** This runs for 3-5 hours. Let it run — check back occasionally.
 
 ### What the Script Does (In Order)
 
