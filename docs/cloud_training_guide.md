@@ -224,7 +224,31 @@ huggingface-cli login
 
 ## Step 5: Run Training
 
-Now the actual training. Run this command:
+### 5.1 Clear old processes (important!)
+
+Before running training for the first time — or any time you restart a pod — **kill leftover Python processes** from previous failed runs. They eat GPU memory silently.
+
+```bash
+pkill -9 python 2>/dev/null; pkill -9 python3 2>/dev/null
+```
+
+Verify the GPU is clean:
+```bash
+nvidia-smi
+```
+
+Look for the **Memory-Usage** column. It should show **low numbers** like:
+
+```
+|   0  NVIDIA A100-SXM4-80GB          On  |   00000000:C1:00.0 Off |
+| N/A   29C    P0             98W /  400W |    123MiB /  81920MiB  |
+```
+
+If it shows **>10,000 MiB** used, there are leftover processes. Check with `ps aux | grep python` and kill them manually, or just **Stop** and **Start** the pod from the RunPod dashboard.
+
+### 5.2 Run the training
+
+Now run this command:
 
 ```bash
 cd /workspace && python cloud_train.py
@@ -371,7 +395,17 @@ BATCH_SIZE = 4                           # Reduce if OOM errors
 pkill -9 python 2>/dev/null; pkill -9 python3 2>/dev/null
 nvidia-smi
 ```
-If GPU memory is high (>60GB used), **Stop and Restart** the pod from the RunPod dashboard.
+If GPU memory is high (>10,000 MiB used), you likely have orphaned processes. Kill them or **Stop** and **Start** the pod from the RunPod dashboard. Always run `pkill -9 python` before starting a new training run.
+
+### CUDA Out of Memory (OOM) during training
+
+**Symptoms**: Training starts but crashes after a few steps with `torch.OutOfMemoryError`.
+
+**Fix**: Reduce batch size — this halves GPU memory usage:
+```bash
+sed -i 's/BATCH_SIZE = 4/BATCH_SIZE = 2/' /workspace/cloud_train.py
+```
+Then re-run. Training will take ~2x longer but use half the memory.
 
 ### "Subprocess died during map operation"
 
