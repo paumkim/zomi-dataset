@@ -226,8 +226,13 @@ print(f"  Warmup steps: {warmup_steps}")
 
 # Auto-resume from latest checkpoint if exists
 import glob
+import os
 ckpts = sorted(glob.glob(f"./{RUN_NAME}/checkpoint-*"), key=lambda x: int(x.split("-")[-1]))
-resume_ckpt = ckpts[-1] if ckpts else None
+# Filter to only checkpoints with valid trainer_state.json
+valid_ckpts = [c for c in ckpts if os.path.exists(f"{c}/trainer_state.json")]
+resume_ckpt = valid_ckpts[-1] if valid_ckpts else None
+if ckpts and not valid_ckpts:
+    print(f"  ⚠ Found {len(ckpts)} checkpoint(s) but none have trainer_state.json — starting fresh")
 if resume_ckpt:
     print(f"  Resuming from: {resume_ckpt}")
 trainer.train(resume_from_checkpoint=resume_ckpt)
