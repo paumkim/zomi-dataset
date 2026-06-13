@@ -15,6 +15,31 @@ People come for the Bible and songs. They stay for the AI. Belonging is the feat
 - **Bible + Lyrics + Textbooks:** Work offline from day one, no download needed
 - **Philosophy:** Every Pau user gets a great experience regardless of phone or internet
 
+## Disaster Recovery — Self-Healing Training Pipeline
+
+The training pod has a watchdog system that auto-recovers from crashes:
+
+| Component | What it does |
+|-----------|-------------|
+| `scripts/watchdog.sh` | Checks every 60s if training is alive. If not, restarts from latest checkpoint. |
+| `cloud_train.py` (auto-resume) | Detects existing checkpoints and resumes from the latest step automatically. |
+| Checkpoints every 200 steps | Saved to `/workspace/zomi-qlora-v1/checkpoint-N/`. Max 2 kept at a time. |
+| Hugging Face auto-upload | After training finishes, model merges and uploads to HF automatically. |
+
+**What happens in a crash:**
+1. Training dies (I/O error, OOM, pod restart)
+2. Watchdog detects missing Python process within 60 seconds
+3. Watchdog restarts `cloud_train.py`
+4. Script finds latest checkpoint (e.g. `checkpoint-2000`)
+5. Trainer resumes from that step — no progress lost
+6. Training continues as if nothing happened
+
+**To deploy watchdog on a new pod:**
+```bash
+scp scripts/watchdog.sh root@<pod>:/workspace/
+ssh root@<pod> "chmod +x /workspace/watchdog.sh && nohup bash watchdog.sh &"
+```
+
 ## Status (June 12, 2026)
 - ✅ Zomi dataset collected (3M+ lines)
 - ✅ Website built (spelling guide, Bible PDF, AI guides)
