@@ -185,7 +185,13 @@ print(f"  Total train samples: {len(train_dataset):,}")
 print(f"  Total eval samples:  {len(eval_dataset):,}")
 print(f"  Warmup steps: {warmup_steps}")
 
-trainer.train()
+# Auto-resume from latest checkpoint if exists
+import glob
+ckpts = sorted(glob.glob(f"./{RUN_NAME}/checkpoint-*"), key=lambda x: int(x.split("-")[-1]))
+resume_ckpt = ckpts[-1] if ckpts else None
+if resume_ckpt:
+    print(f"  Resuming from: {resume_ckpt}")
+trainer.train(resume_from_checkpoint=resume_ckpt)
 
 # ─── 10. SAVE & UPLOAD ────────────────────────────────────────────────────────
 
