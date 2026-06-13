@@ -133,7 +133,7 @@ def extract_youtube_comments(url, state):
     """Extract Zomi comments from a YouTube video."""
     try:
         r = subprocess.run(
-            ["yt-dlp", "--no-download", "--dump-json", "--extract-comments",
+            ["yt-dlp", "--no-download", "--dump-json", "--write-comments",
              "--max-comments", "50", url],
             capture_output=True, text=True, timeout=120)
 

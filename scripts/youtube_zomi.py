@@ -54,7 +54,7 @@ def get_comments(video_url, max_comments=100):
     """Get comments from a YouTube video using yt-dlp."""
     try:
         r = subprocess.run(
-            ["yt-dlp", "--no-download", "--dump-json", "--extract-comments",
+            ["yt-dlp", "--no-download", "--dump-json", "--write-comments",
              "--max-comments", str(max_comments), video_url],
             capture_output=True, text=True, timeout=120)
         comments = []
