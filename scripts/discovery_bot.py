@@ -38,27 +38,51 @@ def log(msg):
     print(f"[{t}] {msg}")
 
 def search_youtube(query, max_results=5):
-    """Search YouTube for Zomi content using public search (no API key needed)."""
+    """Search YouTube for Zomi content. Uses API key if available, falls back to web search."""
     results = []
+
+    # Try YouTube Data API first (requires free API key from Google Cloud Console)
+    api_key = os.environ.get("YOUTUBE_API_KEY", "")
+    if api_key:
+        try:
+            q = urllib.parse.quote(f"{query} Zomi")
+            url = f"https://www.googleapis.com/youtube/v3/search?part=snippet&q={q}&maxResults={max_results}&type=video&key={api_key}"
+            req = urllib.request.Request(url)
+            resp = json.loads(urllib.request.urlopen(req, timeout=10).read())
+
+            for item in resp.get("items", []):
+                vid = item["id"]["videoId"]
+                title = item["snippet"]["title"]
+                results.append({
+                    "title": title,
+                    "url": f"https://youtube.com/watch?v={vid}",
+                    "source": "youtube",
+                    "query": query,
+                })
+            return results
+        except Exception as e:
+            log(f"YouTube API error: {e} — falling back to web search")
+
+    # Fallback: search via DuckDuckGo (no API key needed)
     try:
-        q = urllib.parse.quote(f"{query} Zomi")
-        url = f"https://www.youtube.com/results?search_query={q}"
+        q = urllib.parse.quote(f"site:youtube.com {query} Zomi")
+        url = f"https://html.duckduckgo.com/html/?q={q}"
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         html = urllib.request.urlopen(req, timeout=10).read().decode("utf-8", errors="ignore")
 
-        # Extract video titles and IDs
-        titles = re.findall(r'"title":{"runs":\[{"text":"([^"]+)"', html)
-        ids = re.findall(r'"videoId":"([^"]+)"', html)
+        snippets = re.findall(r'class="result__snippet">(.*?)</a>', html, re.DOTALL)[:max_results]
+        links = re.findall(r'class="result__url"[^>]*href="([^"]+)"', html)[:max_results]
 
-        for i, (title, vid) in enumerate(zip(titles[:max_results], ids[:max_results])):
+        for snippet, link in zip(snippets, links):
+            clean = re.sub(r'<[^>]+>', '', snippet).strip()
             results.append({
-                "title": title,
-                "url": f"https://youtube.com/watch?v={vid}",
-                "source": "youtube",
+                "title": clean[:100],
+                "url": link,
+                "source": "youtube (via web)",
                 "query": query,
             })
     except Exception as e:
-        log(f"YouTube search error for '{query}': {e}")
+        log(f"YouTube search fallback error: {e}")
     return results
 
 def search_web(query, max_results=5):
