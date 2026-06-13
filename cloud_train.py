@@ -7,6 +7,7 @@ Usage:
 
 import os
 import math
+import torch
 from datasets import Dataset
 from transformers import (
     AutoTokenizer,
