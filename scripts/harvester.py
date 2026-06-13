@@ -132,23 +132,33 @@ def phase_discovery(state):
 def extract_youtube_comments(url, state):
     """Extract Zomi comments from a YouTube video."""
     try:
+        video_id = url.split("v=")[-1][:11] if "v=" in url else url.split("/")[-1]
+        out_path = f"/tmp/{video_id}"
+
+        # Download video info with comments
         r = subprocess.run(
-            ["yt-dlp", "--no-download", "--dump-json", "--write-comments",
-             "--max-comments", "50", url],
+            ["yt-dlp", "--write-comments", "--skip-download", "-o", out_path, url],
             capture_output=True, text=True, timeout=120)
 
+        # Read comments from the info.json file
+        info_path = f"{out_path}.info.json"
+        if not os.path.exists(info_path):
+            return 0
+
+        with open(info_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        comments = data.get("comments", [])
         zomi_count = 0
-        for line in r.stdout.strip().split("\n"):
-            if not line: continue
-            try:
-                d = json.loads(line)
-                if "comment" in d:
-                    comment = d["comment"]
-                    if is_zomi(comment):
-                        save_zomi_line(comment, source=url.split("v=")[-1][:11] if "v=" in url else "yt")
-                        zomi_count += 1
-            except:
-                pass
+        for c in comments:
+            text = c.get("text", "")
+            if text and is_zomi(text):
+                save_zomi_line(text, source=video_id)
+                zomi_count += 1
+
+        # Clean up
+        try: os.remove(info_path)
+        except: pass
 
         return zomi_count
     except:

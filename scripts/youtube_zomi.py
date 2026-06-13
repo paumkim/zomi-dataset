@@ -53,19 +53,25 @@ def search_youtube(query, max_results=10):
 def get_comments(video_url, max_comments=100):
     """Get comments from a YouTube video using yt-dlp."""
     try:
-        r = subprocess.run(
-            ["yt-dlp", "--no-download", "--dump-json", "--write-comments",
-             "--max-comments", str(max_comments), video_url],
+        import hashlib
+        video_id = video_url.split("v=")[-1][:11] if "v=" in video_url else video_url.split("/")[-1]
+        out_path = f"/tmp/yt_{video_id}"
+
+        subprocess.run(
+            ["yt-dlp", "--write-comments", "--skip-download", "-o", out_path,
+             "--max-downloads", "1", video_url],
             capture_output=True, text=True, timeout=120)
-        comments = []
-        for line in r.stdout.strip().split("\n"):
-            if line:
-                try:
-                    d = json.loads(line)
-                    if "comment" in d:
-                        comments.append(d["comment"])
-                except:
-                    pass
+
+        info_path = f"{out_path}.info.json"
+        if not os.path.exists(info_path):
+            return []
+
+        with open(info_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        comments = [c.get("text", "") for c in data.get("comments", []) if c.get("text")]
+        try: os.remove(info_path)
+        except: pass
         return comments
     except Exception as e:
         return []
