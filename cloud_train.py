@@ -16,7 +16,6 @@ from transformers import (
     Trainer,
     BitsAndBytesConfig,
     DataCollatorForLanguageModeling,
-    TrainerCallback,
 )
 import huggingface_hub
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
@@ -99,7 +98,6 @@ print(f"Train: {len(train_lines):,} chunks | Eval: {len(eval_lines):,} chunks")
 CACHE_DIR = f"./{RUN_NAME}_tokenized"
 CACHE_TRAIN = f"{CACHE_DIR}/train"
 CACHE_EVAL = f"{CACHE_DIR}/eval"
-CHECKPOINT_HF_REPO = f"{HF_USERNAME}/{RUN_NAME}-checkpoints"
 
 print(f"\nLoading tokenizer: {BASE_MODEL}")
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, trust_remote_code=True)
@@ -159,30 +157,7 @@ model.print_trainable_parameters()
 total_steps = (len(train_dataset) // (BATCH_SIZE * GRADIENT_ACCUMULATION_STEPS)) * NUM_EPOCHS
 warmup_steps = int(total_steps * 0.05)
 
-# ─── 8. TRAINING (with checkpoint streaming to HF) ────────────────────────────
-
-class HfCheckpointCallback(TrainerCallback):
-    """Uploads checkpoints to Hugging Face Hub during training."""
-    def on_save(self, args, state, control, **kwargs):
-        if state.global_step % 200 == 0 and state.global_step > 0:
-            ckpt = f"{args.output_dir}/checkpoint-{state.global_step}"
-            if os.path.exists(ckpt):
-                print(f"Streaming checkpoint to HF: step {state.global_step}")
-                try:
-                    huggingface_hub.HfApi().create_repo(
-                        repo_id=f"{CHECKPOINT_HF_REPO}",
-                        repo_type="model",
-                        exist_ok=True,
-                    )
-                    huggingface_hub.upload_folder(
-                        folder_path=ckpt,
-                        repo_id=CHECKPOINT_HF_REPO,
-                        path_in_repo=f"checkpoint-{state.global_step}",
-                        ignore_patterns=["*.bin"],
-                    )
-                    print(f"  ✓ Step {state.global_step} uploaded to HF")
-                except Exception as e:
-                    print(f"  ⚠ Upload failed: {e}")
+# ─── 8. TRAINING ─────────────────────────────────────────────────────────────
 
 training_args = TrainingArguments(
     output_dir=f"./{RUN_NAME}",
@@ -218,7 +193,6 @@ trainer = Trainer(
     train_dataset=train_dataset,
     eval_dataset=eval_dataset,
     data_collator=DataCollatorForLanguageModeling(tokenizer, mlm=False),
-    callbacks=[HfCheckpointCallback()],
 )
 
 print(f"\nStarting training...")
