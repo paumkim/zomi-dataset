@@ -25,7 +25,7 @@ TRANSLATION_FILE = BASE_DIR / "data" / "translation_pairs.jsonl"
 ZOMI_MARKERS = {
     "hi", "pen", "tawh", "ahi", "ci", "mite", "khempeuh",
     "ciangin", "bangin", "mahmah", "hiam", "hong", "om",
-    "nawn", "ke', "ke'n", "kei", "kong", "Pasian", "Topa",
+    "nawn", "ke'", "ke'n", "kei", "kong", "Pasian", "Topa",
     "Laisiangtho", "Zeisu", "Khazih", "Gam", "Minam",
     "kammal", "thu", "pau", "gam", "sinna", "kicing",
 }
