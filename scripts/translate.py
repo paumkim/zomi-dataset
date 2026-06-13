@@ -148,21 +148,21 @@ def main():
     if "--serve" in sys.argv:
         # Web server mode
         from http.server import HTTPServer, BaseHTTPRequestHandler
-        HTML = """<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Zomi Translator</title>
-<style>body{font-family:sans-serif;max-width:600px;margin:40px auto;padding:20px;background:#0D1117;color:#E6EDF3}
-textarea,input{width:100%;padding:10px;margin:8px 0;background:#161B22;border:1px solid #30363D;color:#E6EDF3;border-radius:6px;font-size:16px}
-button{background:#D4A017;color:#0D1117;border:none;padding:12px 24px;border-radius:6px;font-size:16px;cursor:pointer}
-.result{padding:12px;background:#161B22;border-radius:6px;margin:12px 0;font-size:18px}
+        HTML_TEMPLATE = """<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Zomi Translator</title>
+<style>body{{font-family:sans-serif;max-width:600px;margin:40px auto;padding:20px;background:#0D1117;color:#E6EDF3}}
+textarea,input{{width:calc(100%% - 24px);padding:10px;margin:8px 0;background:#161B22;border:1px solid #30363D;color:#E6EDF3;border-radius:6px;font-size:16px}}
+button{{background:#D4A017;color:#0D1117;border:none;padding:12px 24px;border-radius:6px;font-size:16px;cursor:pointer}}
+.result{{padding:12px;background:#161B22;border-radius:6px;margin:12px 0;font-size:18px}}
 </style></head><body>
 <h1>📝 Zomi Translator</h1>
 <form method="POST"><textarea name="text" rows="3" placeholder="Enter text..."></textarea>
 <button type="submit">Translate</button></form>
-<div class="result">%s</div>
+<div class="result">{RESULT}</div>
 </body></html>"""
 
         class Handler(BaseHTTPRequestHandler):
             def do_GET(self):
-                self.send_html(HTML % "Enter text above to translate between English and Zomi.")
+                self.send_html(HTML_TEMPLATE.replace("{RESULT}", "Enter text above to translate between English and Zomi."))
             def do_POST(self):
                 length = int(self.headers.get("Content-Length", 0))
                 body = self.rfile.read(length).decode() if length else ""
@@ -174,7 +174,7 @@ button{background:#D4A017;color:#0D1117;border:none;padding:12px 24px;border-rad
                     result = translator.translate(text)
                 else:
                     result = ""
-                self.send_html(HTML % result)
+                self.send_html(HTML_TEMPLATE.replace("{RESULT}", result))
             def send_html(self, html):
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
