@@ -321,7 +321,7 @@ def main():
         return
 
     if "--loop" in sys.argv:
-        interval = int(sys.argv[sys.argv.index("--interval") + 1]) if "--interval" in sys.argv else 120
+        interval = int(sys.argv[sys.argv.index("--interval") + 1]) if "--interval" in sys.argv else 30
         log(f"Loop every {interval} min. Ctrl+C to stop.")
         while True:
             run_cycle(proxy_mgr)
