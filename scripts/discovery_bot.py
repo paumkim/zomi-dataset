@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+"""
+Zomi Data Discovery Bot — finds Zomi content from public sources.
+Searches YouTube, web, and news for new Zomi text to add to the dataset.
+
+Usage: python3 scripts/discovery_bot.py
+"""
+
+import re, json, os, time, urllib.request, urllib.parse
+from pathlib import Path
+
+BASE_DIR = Path(__file__).parent.parent
+DATA_DIR = BASE_DIR / "data"
+DISCOVERY_FILE = BASE_DIR / "data" / "discovered_sources.json"
+LOG_FILE = BASE_DIR / "data" / "discovery_log.txt"
+
+# Seed terms — the bot generates more from these
+SEED_TERMS = [
+    "Zomi", "Tedim", "Zo people", "Zomi language",
+    "Zomi song", "Tedim Bible", "Zomi news",
+    "Zomi church", "Zomi culture", "Pasian",
+    "Zomi Daily", "Tedim Post", "Zomi worship",
+]
+
+# Known sources
+KNOWN_SOURCES = [
+    "youtube.com/@tedimpost",
+    "youtube.com/@ZomiDailyNews",
+    "tedimpost.com",
+    "zomidaily.com",
+    "zomiworshipcollective.com",
+]
+
+def log(msg):
+    t = time.strftime("%Y-%m-%d %H:%M:%S")
+    with open(LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(f"[{t}] {msg}\n")
+    print(f"[{t}] {msg}")
+
+def search_youtube(query, max_results=5):
+    """Search YouTube for Zomi content using public search (no API key needed)."""
+    results = []
+    try:
+        q = urllib.parse.quote(f"{query} Zomi")
+        url = f"https://www.youtube.com/results?search_query={q}"
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        html = urllib.request.urlopen(req, timeout=10).read().decode("utf-8", errors="ignore")
+
+        # Extract video titles and IDs
+        titles = re.findall(r'"title":{"runs":\[{"text":"([^"]+)"', html)
+        ids = re.findall(r'"videoId":"([^"]+)"', html)
+
+        for i, (title, vid) in enumerate(zip(titles[:max_results], ids[:max_results])):
+            results.append({
+                "title": title,
+                "url": f"https://youtube.com/watch?v={vid}",
+                "source": "youtube",
+                "query": query,
+            })
+    except Exception as e:
+        log(f"YouTube search error for '{query}': {e}")
+    return results
+
+def search_web(query, max_results=5):
+    """Search public web for Zomi content via DuckDuckGo."""
+    results = []
+    try:
+        q = urllib.parse.quote(query)
+        url = f"https://html.duckduckgo.com/html/?q={q}"
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        html = urllib.request.urlopen(req, timeout=10).read().decode("utf-8", errors="ignore")
+
+        snippets = re.findall(r'class="result__snippet">(.*?)</a>', html, re.DOTALL)
+        links = re.findall(r'class="result__url"[^>]*href="([^"]+)"', html)
+
+        for i, (snippet, link) in enumerate(zip(snippets[:max_results], links[:max_results])):
+            clean = re.sub(r'<[^>]+>', '', snippet).strip()
+            results.append({
+                "snippet": clean[:200],
+                "url": link,
+                "source": "web",
+                "query": query,
+            })
+    except Exception as e:
+        log(f"Web search error for '{query}': {e}")
+    return results
+
+def load_discovered():
+    if DISCOVERY_FILE.exists():
+        return json.loads(DISCOVERY_FILE.read_text())
+    return {"terms": [], "sources": [], "discovered": []}
+
+def save_discovered(data):
+    DISCOVERY_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+
+def run():
+    log("=" * 50)
+    log("Zomi Discovery Bot — Starting")
+    log("=" * 50)
+
+    discovered = load_discovered()
+    all_terms = list(set(SEED_TERMS + discovered.get("terms", [])))
+    log(f"Seed terms: {len(all_terms)}")
+
+    new_sources = []
+
+    # Search each term
+    for term in all_terms[:10]:  # Limit to 10 terms per run
+        log(f"Searching: {term}")
+
+        # YouTube
+        for result in search_youtube(term):
+            url = result["url"]
+            if url not in [s["url"] for s in discovered["discovered"]]:
+                new_sources.append(result)
+                log(f"  YouTube: {result['title'][:60]}")
+
+        # Web
+        for result in search_web(term):
+            url = result["url"]
+            if url not in [s["url"] for s in discovered["discovered"]]:
+                new_sources.append(result)
+                log(f"  Web: {result['snippet'][:60]}...")
+
+        time.sleep(1)  # Be polite
+
+    # Add new sources
+    discovered["discovered"] = (discovered["discovered"] + new_sources)[-500:]
+    save_discovered(discovered)
+
+    log(f"\nDone. New sources found: {len(new_sources)}")
+    log(f"Total tracked: {len(discovered['discovered'])}")
+
+if __name__ == "__main__":
+    run()
