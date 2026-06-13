@@ -60,16 +60,17 @@ def is_zomi(text):
     return len(matches) >= 2
 
 def is_visited(url, state):
-    # Use URL hash for efficient checking
     url_hash = hashlib.md5(url.encode()).hexdigest()
-    return url_hash in state.get("visited_hashes", set())
+    # Convert to set for efficient lookup (visited_hashes stored as list for JSON)
+    return url_hash in set(state.get("visited_hashes", []))
 
 def mark_visited(url, state):
     if "visited_hashes" not in state:
-        state["visited_hashes"] = set()
-    state["visited_hashes"].add(hashlib.md5(url.encode()).hexdigest())
+        state["visited_hashes"] = []
+    url_hash = hashlib.md5(url.encode()).hexdigest()
+    if url_hash not in state["visited_hashes"]:
+        state["visited_hashes"].append(url_hash)
     state["visited_urls"].append(url)
-    # Keep last 1000
     if len(state["visited_urls"]) > 1000:
         state["visited_urls"] = state["visited_urls"][-1000:]
 
@@ -104,7 +105,7 @@ def phase_discovery(state):
 
             # Extract links
             links = re.findall(r'class="result__url"[^>]*href="([^"]+)"', r.stdout)
-            titles = re.findall(r'class="result__title"[^>]*>.*?<a[^>]*>(.*?)</a>', r.text, re.DOTALL)
+            titles = re.findall(r'class="result__title"[^>]*>.*?<a[^>]*>(.*?)</a>', r.stdout, re.DOTALL)
 
             for i, link in enumerate(links[:5]):
                 if is_visited(link, state):
