@@ -26,3 +26,4 @@ nohup.out
 # OS
 .DS_Store
 Thumbs.db
+personal_agent.py
