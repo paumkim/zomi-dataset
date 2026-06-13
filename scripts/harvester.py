@@ -9,11 +9,11 @@ Usage:
   python3 scripts/harvester.py --loop --interval 30  # Custom interval in minutes
 """
 
-import json, os, subprocess, time, re, hashlib
-from pathlib import Path
+import json, os, subprocess, time, re, hashlib, random
 
 BASE = Path(__file__).parent.parent
 STATE_FILE = BASE / "data" / "harvester_state.json"
+YOUTUBE_OUTPUT = BASE / "data" / "youtube_zomi_new.txt"
 YOUTUBE_OUTPUT = BASE / "data" / "youtube_zomi_new.txt"
 DISCOVERY_OUTPUT = BASE / "data" / "discovered_sources.json"
 CONVERSATIONAL_OUTPUT = BASE / "data" / "conversation_input.txt"
@@ -51,6 +51,11 @@ def load_state():
 
 def save_state(state):
     STATE_FILE.write_text(json.dumps(state, indent=2))
+
+def random_delay(mean, spread=0.5):
+    """Sleep for mean ± spread seconds with random jitter."""
+    delay = mean + random.uniform(-spread, spread)
+    time.sleep(max(delay, 0.5))
 
 def is_zomi(text):
     if not text or len(text) < 10:
@@ -123,7 +128,7 @@ def phase_discovery(state):
         except Exception as e:
             log(f"  Search error: {e}")
 
-        time.sleep(3)  # Polite delay
+        random_delay(8, 4)  # Stealth delay between web searches
 
     return new_sources
 
@@ -198,7 +203,7 @@ def phase_youtube_search(state):
                         total_zomi += zomi_count
                         log(f"    → {zomi_count} Zomi comments")
 
-                    time.sleep(5)  # Polite delay between videos
+                    random_delay(12, 6)  # Stealth delay between video comments
 
                 except:
                     continue
@@ -206,7 +211,7 @@ def phase_youtube_search(state):
         except Exception as e:
             log(f"  YouTube search error: {e}")
 
-        time.sleep(3)
+        random_delay(8, 4)  # Stealth between search terms
 
     return total_zomi
 
@@ -243,7 +248,7 @@ def run_cycle():
 
 def main():
     if "--loop" in sys.argv:
-        interval = 15  # minutes
+        interval = 120  # 2 hours between cycles (stealth)
         if "--interval" in sys.argv:
             idx = sys.argv.index("--interval")
             interval = int(sys.argv[idx + 1])
@@ -252,7 +257,7 @@ def main():
         while True:
             run_cycle()
             log(f"\nSleeping {interval} minutes...\n")
-            time.sleep(interval * 60)
+            time.sleep(interval * 60 + random.uniform(-300, 300))  # Jitter ±5 min
     else:
         run_cycle()
 
