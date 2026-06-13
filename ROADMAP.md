@@ -15,6 +15,19 @@ People come for the Bible and songs. They stay for the AI. Belonging is the feat
 - **Bible + Lyrics + Textbooks:** Work offline from day one, no download needed
 - **Philosophy:** Every Pau user gets a great experience regardless of phone or internet
 
+## Two-Phase Training Plan
+
+| Phase | What | Status | Data | Cost |
+|-------|------|--------|------|------|
+| **Phase 1** | Continued pre-training — model learns to **speak** Zomi | 🏃 Running on A100 | 3M+ lines raw Zomi text | ~$60 |
+| **Phase 2** | Instruction fine-tuning — model learns to **translate** on command | ✅ Ready to launch | 500K EN↔ZOMI instruction pairs | ~$15-20 |
+| **Final** | Zomi conversational model that speaks AND translates | ⏳ After Phase 1 finishes | Both datasets combined | ~$80 total |
+
+### Phase 2 Launch Command
+```bash
+python3 scripts/train_instructions.py
+```
+
 ## Disaster Recovery — Self-Healing Training Pipeline
 
 The training pod has a watchdog system that auto-recovers from crashes:
