@@ -249,3 +249,21 @@ tokenizer.push_to_hub(f"{HF_USERNAME}/{RUN_NAME}")
 print(f"\n✓ Done! Model uploaded to: https://huggingface.co/{HF_USERNAME}/{RUN_NAME}")
 print(f"  Final eval loss: {trainer.state.best_metric:.4f}")
 print(f"  Perplexity: {math.exp(trainer.state.best_metric):.4f}")
+
+# ─── PHASE 2 AUTO-LAUNCH ──────────────────────────────────────────────────────
+print("\n" + "=" * 60)
+print("  PHASE 1 COMPLETE — Auto-launching Phase 2")
+print("=" * 60)
+print("\nLaunching instruction fine-tuning...")
+import subprocess
+result = subprocess.run(
+    ["python3", "/workspace/train_instructions.py"],
+    capture_output=True, text=True, timeout=7200,  # 2 hour timeout
+)
+print(result.stdout[-1000:] if result.stdout else "")
+if result.stderr:
+    print(f"  Stderr: {result.stderr[-500:]}")
+if result.returncode == 0:
+    print("\n✓ Phase 2 complete!")
+else:
+    print(f"\n⚠ Phase 2 exited with code {result.returncode}")
