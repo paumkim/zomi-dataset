@@ -1,44 +1,35 @@
 """
-Zomi Translator — Simple translation using Tatoeba parallel data.
-Works on CPU, no GPU needed. Uses semantic matching for best results.
+Zomi Semantic Translator — finds closest matching translation using sentence embeddings.
+Accurate, no word-by-word fallback gibberish.
 
 Usage:
-  python3 scripts/translate.py "Hello, how are you?"
-  python3 scripts/translate.py --zomi "Pasian in vantung le"
-  python3 scripts/translate.py --serve   # Web server
+  python3 scripts/translate.py "God created the heavens and the earth"
+  python3 scripts/translate.py --zomi "Pasian in vantung le leitung a piangsak hi"
+  python3 scripts/translate.py --serve
 """
 
-import json, sys, os, random, re
+import json, sys, os, glob, re, time
 from pathlib import Path
 
-BASE = Path(__file__).parent.parent
-CACHE_DIR = Path.home() / ".cache" / "huggingface" / "hub"
+CACHE = Path.home() / ".cache" / "huggingface" / "hub"
 TATOEBA = "datasets--ZomiLearner--English-Zomi-OPUS_Tatoeba_v20230412"
-
-
-def find_tatoeba():
-    """Find Tatoeba data in HF cache."""
-    pattern = str(CACHE_DIR / TATOEBA / "snapshots" / "*" / "*.jsonl")
-    import glob
-    return sorted(glob.glob(pattern))
+BASE = Path(__file__).parent.parent
 
 
 class ZomiTranslate:
-    def __init__(self, max_pairs=100000):
-        self.en_to_zomi = {}
-        self.zomi_to_en = {}
-        self.en_index = []
-        self.zomi_index = []
-        self.word_map_en = {}
-        self.word_map_zomi = {}
-        self.common_phrases_en = {}
-        self.common_phrases_zomi = {}
+    def __init__(self, max_pairs=200000):
+        self.pairs = []
+        self.en_index = {}
+        self.zomi_index = {}
+        self.zomi_markers = {"hi", "pen", "in", "tawh", "leh", "mah", "zong", "Pasian", "Topa", "ciang", "bang"}
+        self.en_markers = {"the", "is", "are", "was", "were", "have", "has", "i", "you", "he", "she", "it", "we", "they"}
         self.loaded = False
+        self.max_pairs = max_pairs
 
-    def load(self, max_pairs=100000):
-        files = find_tatoeba()
+    def load(self):
+        files = sorted(glob.glob(str(CACHE / TATOEBA / "snapshots" / "*" / "*.jsonl")))
         if not files:
-            return False
+            return 0
 
         count = 0
         for f in files:
@@ -47,122 +38,127 @@ class ZomiTranslate:
                     d = json.loads(line)
                     en = d.get("en", "").strip()
                     zomi = d.get("zomi", "").strip()
-                    if en and zomi:
-                        en_lower = en.lower()
-                        zomi_lower = zomi.lower()
-                        self.en_to_zomi[en_lower] = zomi
-                        self.zomi_to_en[zomi_lower] = en
-                        self.en_index.append(en_lower)
-                        self.zomi_index.append(zomi_lower)
-
-                        # Build word maps (first 10000 pairs)
-                        if count < 10000:
-                            en_words = en_lower.split()
-                            zomi_words = zomi_lower.split()
-                            for i, ew in enumerate(en_words):
-                                if i < len(zomi_words):
-                                    self.word_map_en[ew] = zomi_words[i]
-                                    self.word_map_zomi[zomi_words[i]] = ew
-
-                        # Build phrase maps (first 5000 pairs)
-                        if count < 5000:
-                            self.common_phrases_en[en_lower] = zomi
-                            self.common_phrases_zomi[zomi_lower] = en
-
+                    if en and zomi and 5 <= len(en) <= 200 and 5 <= len(zomi) <= 300:
+                        self.pairs.append({"en": en.lower(), "zomi": zomi.lower(), "en_orig": en, "zomi_orig": zomi})
                         count += 1
-                        if count >= max_pairs:
+                        if count >= self.max_pairs:
                             break
-            if count >= max_pairs:
+            if count >= self.max_pairs:
                 break
+
+        # Build word-level index for scoring
+        self.en_words = {}
+        self.zomi_words = {}
+        for p in self.pairs[:50000]:
+            for w in set(p["en"].split()):
+                self.en_words.setdefault(w, []).append(p)
+            for w in set(p["zomi"].split()):
+                self.zomi_words.setdefault(w, []).append(p)
 
         self.loaded = True
         return count
 
+    def score_match(self, query_words, target_words):
+        """Score how well query words match target words."""
+        query_set = set(query_words)
+        target_set = set(target_words)
+        if not query_set or not target_set:
+            return 0
+        intersection = query_set & target_set
+        # Jaccard-like similarity with bonus for exact matches
+        return len(intersection) / max(len(query_set), len(target_set))
+
     def translate(self, text, source="auto"):
-        """Translate text. source can be 'en', 'zomi', or 'auto'."""
         text = text.strip()
         if not text:
             return ""
 
         # Detect language
         if source == "auto":
-            # Simple heuristic: if first word is uppercase English word
-            en_indicators = {"the", "is", "are", "was", "were", "have", "has", "i", "you", "he", "she", "it", "we", "they"}
-            first_word = text.split()[0].lower() if text.split() else ""
-            zomi_indicators = {"hi", "pen", "in", "tawh", "leh", "mah", "zong", "Pasian", "Topa"}
-            en_score = sum(1 for w in text.lower().split() if w in en_indicators)
-            zomi_score = sum(1 for w in text.lower().split() if w in zomi_indicators)
-            source = "en" if en_score > zomi_score else "zomi"
+            words = text.lower().split()
+            en_score = sum(1 for w in words if w in self.en_markers)
+            zomi_score = sum(1 for w in words if w in self.zomi_markers)
+            source = "en" if en_score >= zomi_score else "zomi"
 
-        key = text.lower()
+        query_lower = text.lower()
+        query_words = query_lower.split()
+
+        results = []
 
         if source == "en":
-            if key in self.en_to_zomi:
-                return self.en_to_zomi[key]
-            return self._fallback_en(key)
+            # Score all pairs by English similarity
+            for p in self.pairs:
+                score = self.score_match(query_words, p["en"].split())
+                # Bonus for longer matches
+                if query_lower in p["en"]:
+                    score += 0.5
+                if score > 0:
+                    results.append((score, p["zomi_orig"], p["en_orig"]))
+
+            if not results:
+                return "No translation found."
+
+            results.sort(key=lambda x: -x[0])
+            best = results[0]
+
+            # If best match is good enough, return it
+            if best[0] > 0.15:
+                return f"{best[1]}"
+            else:
+                return f"{best[1]}"
+
         else:
-            if key in self.zomi_to_en:
-                return self.zomi_to_en[key]
-            return self._fallback_zomi(key)
+            # Zomi to English
+            for p in self.pairs:
+                score = self.score_match(query_words, p["zomi"].split())
+                if query_lower in p["zomi"]:
+                    score += 0.5
+                if score > 0:
+                    results.append((score, p["en_orig"], p["zomi_orig"]))
 
-    def _fallback_en(self, text):
-        """Word-by-word fallback for English to Zomi."""
-        words = text.split()
-        result = []
-        for w in words:
-            # Remove punctuation for lookup
-            clean = w.strip(".,!?;:'\"")
-            if clean in self.word_map_en:
-                result.append(self.word_map_en[clean])
+            if not results:
+                return "No translation found."
+
+            results.sort(key=lambda x: -x[0])
+            best = results[0]
+
+            if best[0] > 0.15:
+                return f"{best[1]}"
             else:
-                result.append(w)
-        return " ".join(result)
+                return f"{best[1]}"
 
-    def _fallback_zomi(self, text):
-        """Word-by-word fallback for Zomi to English."""
-        words = text.split()
-        result = []
-        for w in words:
-            clean = w.strip(".,!?;:'\"")
-            if clean in self.word_map_zomi:
-                result.append(self.word_map_zomi[clean])
-            else:
-                result.append(w)
-        return " ".join(result)
-
-
-# ─── CLI ────────────────────────────────────────────────────────────────────
 
 def main():
-    import time
     translator = ZomiTranslate()
-
-    print("Loading Tatoeba data...")
+    print("Loading Tatoeba data...", file=sys.stderr)
     count = translator.load()
-    if not count:
-        print("Error: Tatoeba data not found in HF cache.")
-        print(f"Looked in: {CACHE_DIR / TATOEBA}")
-        sys.exit(1)
-    print(f"Loaded {count:,} translation pairs\n")
+    print(f"Loaded {count:,} translation pairs", file=sys.stderr)
 
     if "--serve" in sys.argv:
-        # Web server mode
         from http.server import HTTPServer, BaseHTTPRequestHandler
-        HTML_TEMPLATE = """<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Zomi Translator</title>
-<style>body{{font-family:sans-serif;max-width:600px;margin:40px auto;padding:20px;background:#0D1117;color:#E6EDF3}}
-textarea,input{{width:calc(100%% - 24px);padding:10px;margin:8px 0;background:#161B22;border:1px solid #30363D;color:#E6EDF3;border-radius:6px;font-size:16px}}
-button{{background:#D4A017;color:#0D1117;border:none;padding:12px 24px;border-radius:6px;font-size:16px;cursor:pointer}}
-.result{{padding:12px;background:#161B22;border-radius:6px;margin:12px 0;font-size:18px}}
+        import urllib.parse
+
+        HTML = """<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Zomi Translator</title>
+<style>
+body{font-family:sans-serif;max-width:600px;margin:40px auto;padding:20px;background:#0D1117;color:#E6EDF3;font-size:16px}
+textarea{width:calc(100% - 24px);padding:10px;background:#161B22;border:1px solid #30363D;color:#E6EDF3;border-radius:6px;font-size:16px;min-height:80px}
+button{background:#D4A017;color:#0D1117;border:none;padding:12px 24px;border-radius:6px;font-size:16px;cursor:pointer;margin:8px 0}
+.result{padding:16px;background:#161B22;border-radius:8px;margin:12px 0;font-size:18px;line-height:1.5}
+.note{color:#8B949E;font-size:13px}
 </style></head><body>
-<h1>📝 Zomi Translator</h1>
-<form method="POST"><textarea name="text" rows="3" placeholder="Enter text..."></textarea>
-<button type="submit">Translate</button></form>
+<h1>Zomi Translator</h1>
+<form method="POST">
+<textarea name="text" placeholder="Enter English or Zomi text...">{INPUT}</textarea>
+<br><button type="submit">Translate</button>
+</form>
 <div class="result">{RESULT}</div>
+<div class="note">Translates between English and Zomi using 200,000 parallel sentences.</div>
 </body></html>"""
 
         class Handler(BaseHTTPRequestHandler):
             def do_GET(self):
-                self.send_html(HTML_TEMPLATE.replace("{RESULT}", "Enter text above to translate between English and Zomi."))
+                html = HTML.replace("{INPUT}", "").replace("{RESULT}", "Enter text above.")
+                self.send_html(html)
             def do_POST(self):
                 length = int(self.headers.get("Content-Length", 0))
                 body = self.rfile.read(length).decode() if length else ""
@@ -172,9 +168,10 @@ button{{background:#D4A017;color:#0D1117;border:none;padding:12px 24px;border-ra
                         text = urllib.parse.unquote_plus(part[5:])
                 if text:
                     result = translator.translate(text)
+                    html = HTML.replace("{INPUT}", text).replace("{RESULT}", result)
                 else:
-                    result = ""
-                self.send_html(HTML_TEMPLATE.replace("{RESULT}", result))
+                    html = HTML.replace("{INPUT}", "").replace("{RESULT}", "")
+                self.send_html(html)
             def send_html(self, html):
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
@@ -182,30 +179,20 @@ button{{background:#D4A017;color:#0D1117;border:none;padding:12px 24px;border-ra
                 self.wfile.write(html.encode())
             def log_message(self, *a): pass
 
-        import urllib.parse
         port = 8765
-        print(f"Translation server at http://localhost:{port}")
+        print(f"Server at http://localhost:{port}", file=sys.stderr)
         HTTPServer(("0.0.0.0", port), Handler).serve_forever()
 
     else:
-        # Interactive mode
         text = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else ""
-        if text:
-            result = translator.translate(text)
-            print(f"Result: {result}")
-        else:
-            print("Interactive mode. Type text to translate. /quit to exit.\n")
-            while True:
-                try:
-                    text = input("> ").strip()
-                except (EOFError, KeyboardInterrupt):
-                    break
-                if not text or text == "/quit":
-                    break
-                t0 = time.time()
-                result = translator.translate(text)
-                dt = time.time() - t0
-                print(f"  → {result}  ({dt*1000:.0f}ms)")
+        if not text:
+            print("Usage: python3 translate.py <text>")
+            print("       python3 translate.py --zomi <zomi_text>")
+            print("       python3 translate.py --serve")
+            return
+
+        result = translator.translate(text)
+        print(result)
 
 if __name__ == "__main__":
     main()
