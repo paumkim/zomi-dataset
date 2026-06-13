@@ -15,9 +15,8 @@ from transformers import (
     Trainer,
     BitsAndBytesConfig,
     DataCollatorForLanguageModeling,
+    TrainerCallback,
 )
-from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
-import torch
 import huggingface_hub
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
@@ -93,19 +92,35 @@ train_lines = packed_lines[:split_idx]
 eval_lines = packed_lines[split_idx:]
 print(f"Train: {len(train_lines):,} chunks | Eval: {len(eval_lines):,} chunks")
 
-# ─── 4. LOAD TOKENIZER & PRE-TOKENIZE ───────────────────────────────────────
+# ─── 4. LOAD TOKENIZER & PRE-TOKENIZE (with caching) ─────────────────────────
+
+CACHE_DIR = f"./{RUN_NAME}_tokenized"
+CACHE_TRAIN = f"{CACHE_DIR}/train"
+CACHE_EVAL = f"{CACHE_DIR}/eval"
+CHECKPOINT_HF_REPO = f"{HF_USERNAME}/{RUN_NAME}-checkpoints"
 
 print(f"\nLoading tokenizer: {BASE_MODEL}")
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL, trust_remote_code=True)
 tokenizer.pad_token = tokenizer.eos_token
 
-print("Tokenizing packed chunks (42k items — fits in memory)...")
-def tok_fn(examples):
-    return tokenizer(examples["text"], truncation=True, max_length=MAX_SEQ_LENGTH, padding="max_length")
+if os.path.exists(CACHE_TRAIN) and os.path.exists(CACHE_EVAL):
+    print("Loading cached tokenized dataset...")
+    train_dataset = Dataset.load_from_disk(CACHE_TRAIN)
+    eval_dataset = Dataset.load_from_disk(CACHE_EVAL)
+    del packed_lines, train_lines, eval_lines
+else:
+    print("Tokenizing packed chunks (42k items — fits in memory)...")
+    def tok_fn(examples):
+        return tokenizer(examples["text"], truncation=True, max_length=MAX_SEQ_LENGTH, padding="max_length")
 
-train_dataset = Dataset.from_dict({"text": train_lines}).map(tok_fn, batched=True, remove_columns=["text"])
-eval_dataset = Dataset.from_dict({"text": eval_lines}).map(tok_fn, batched=True, remove_columns=["text"])
-del train_lines, eval_lines, packed_lines
+    train_dataset = Dataset.from_dict({"text": train_lines}).map(tok_fn, batched=True, remove_columns=["text"])
+    eval_dataset = Dataset.from_dict({"text": eval_lines}).map(tok_fn, batched=True, remove_columns=["text"])
+    del train_lines, eval_lines, packed_lines
+
+    print(f"Caching tokenized dataset to {CACHE_DIR}...")
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    train_dataset.save_to_disk(CACHE_TRAIN)
+    eval_dataset.save_to_disk(CACHE_EVAL)
 
 # ─── 6. LOAD MODEL (4-bit QLoRA) ─────────────────────────────────────────────
 
@@ -142,7 +157,30 @@ model.print_trainable_parameters()
 total_steps = (len(train_dataset) // (BATCH_SIZE * GRADIENT_ACCUMULATION_STEPS)) * NUM_EPOCHS
 warmup_steps = int(total_steps * 0.05)
 
-# ─── 8. TRAINING ─────────────────────────────────────────────────────────────
+# ─── 8. TRAINING (with checkpoint streaming to HF) ────────────────────────────
+
+class HfCheckpointCallback(TrainerCallback):
+    """Uploads checkpoints to Hugging Face Hub during training."""
+    def on_save(self, args, state, control, **kwargs):
+        if state.global_step % 200 == 0 and state.global_step > 0:
+            ckpt = f"{args.output_dir}/checkpoint-{state.global_step}"
+            if os.path.exists(ckpt):
+                print(f"Streaming checkpoint to HF: step {state.global_step}")
+                try:
+                    huggingface_hub.HfApi().create_repo(
+                        repo_id=f"{CHECKPOINT_HF_REPO}",
+                        repo_type="model",
+                        exist_ok=True,
+                    )
+                    huggingface_hub.upload_folder(
+                        folder_path=ckpt,
+                        repo_id=CHECKPOINT_HF_REPO,
+                        path_in_repo=f"checkpoint-{state.global_step}",
+                        ignore_patterns=["*.bin"],
+                    )
+                    print(f"  ✓ Step {state.global_step} uploaded to HF")
+                except Exception as e:
+                    print(f"  ⚠ Upload failed: {e}")
 
 training_args = TrainingArguments(
     output_dir=f"./{RUN_NAME}",
@@ -178,6 +216,7 @@ trainer = Trainer(
     train_dataset=train_dataset,
     eval_dataset=eval_dataset,
     data_collator=DataCollatorForLanguageModeling(tokenizer, mlm=False),
+    callbacks=[HfCheckpointCallback()],
 )
 
 print(f"\nStarting training...")
