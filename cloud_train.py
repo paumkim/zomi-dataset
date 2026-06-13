@@ -19,6 +19,7 @@ from transformers import (
     TrainerCallback,
 )
 import huggingface_hub
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
 # ─── CONFIG ──────────────────────────────────────────────────────────────────
 
