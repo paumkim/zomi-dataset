@@ -238,15 +238,19 @@ merged.save_pretrained(merged_path)
 tokenizer.save_pretrained(merged_path)
 
 print(f"\nUploading to Hugging Face Hub: {HF_USERNAME}/{RUN_NAME}")
-huggingface_hub.HfApi().create_repo(
-    repo_id=f"{HF_USERNAME}/{RUN_NAME}",
-    repo_type="model",
-    exist_ok=True,
-)
-merged.push_to_hub(f"{HF_USERNAME}/{RUN_NAME}")
-tokenizer.push_to_hub(f"{HF_USERNAME}/{RUN_NAME}")
-
-print(f"\n✓ Done! Model uploaded to: https://huggingface.co/{HF_USERNAME}/{RUN_NAME}")
+try:
+    huggingface_hub.HfApi().create_repo(
+        repo_id=f"{HF_USERNAME}/{RUN_NAME}",
+        repo_type="model",
+        exist_ok=True,
+    )
+    merged.push_to_hub(f"{HF_USERNAME}/{RUN_NAME}")
+    tokenizer.push_to_hub(f"{HF_USERNAME}/{RUN_NAME}")
+    print(f"\n✓ Uploaded to: https://huggingface.co/{HF_USERNAME}/{RUN_NAME}")
+except Exception as e:
+    print(f"\n⚠ HF upload failed: {e}")
+    print(f"  Model saved locally at: {merged_path}")
+    print(f"  Upload manually later or set a valid HF token.")
 print(f"  Final eval loss: {trainer.state.best_metric:.4f}")
 print(f"  Perplexity: {math.exp(trainer.state.best_metric):.4f}")
 
