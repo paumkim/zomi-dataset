@@ -25,6 +25,12 @@ BASE_MODEL = CKPTS[-1] if CKPTS else str(CHECKPOINT_DIR)
 OUTPUT_DIR = BASE / "zomi-instruct-v1"
 INSTRUCTION_DATA = BASE / "data" / "zomi_instructions.jsonl"
 
+# Phase 1 corpus — mix in to prevent forgetting Zomi
+ZOMI_CORPUS_FILES = [
+    BASE / "data" / "zomi_clean_p1.txt",
+    BASE / "data" / "zomi_clean_p2.txt",
+]
+
 MAX_LENGTH = 1024
 BATCH_SIZE = 4
 GRADIENT_ACCUMULATION_STEPS = 8
@@ -87,6 +93,7 @@ def main():
 
     with open(INSTRUCTION_DATA, "r", encoding="utf-8") as f:
         raw_data = [json.loads(line) for line in f if line.strip()]
+    print(f"  Instruction pairs: {len(raw_data):,}")
 
     # Format as chat-style prompts
     def format_instruction(example):
@@ -95,6 +102,24 @@ def main():
         }
 
     formatted = [format_instruction(ex) for ex in raw_data]
+
+    # Mix in raw Zomi text from Phase 1 corpus to prevent forgetting
+    print("\nMixing in raw Zomi text for language retention...")
+    zomi_lines = []
+    for cf in ZOMI_CORPUS_FILES:
+        if cf.exists():
+            with open(cf, "r", encoding="utf-8", errors="ignore") as f:
+                lines = [l.strip() for l in f if l.strip()]
+            zomi_lines.extend(lines)
+            print(f"  Loaded {len(lines):,} lines from {cf.name}")
+
+    # Add raw Zomi text — 1 raw line for every 3 instruction pairs
+    import random
+    raw_count = min(len(zomi_lines), len(formatted) // 3)
+    zomi_sample = random.sample(zomi_lines, raw_count)
+    for line in zomi_sample:
+        formatted.append({"text": f"{line}{tokenizer.eos_token}"})
+    print(f"  Added {raw_count:,} raw Zomi lines for retention")
     split = int(len(formatted) * 0.95)
     train_data = formatted[:split]
     eval_data = formatted[split:]
